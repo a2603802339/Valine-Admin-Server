@@ -22,30 +22,14 @@ if (process.env.SMTP_SERVICE != null) {
 }
 
 const transporter = nodemailer.createTransport(config);
-const templateName = process.env.TEMPLATE_NAME
-  ? process.env.TEMPLATE_NAME
-  : "rainbow";
-const noticeTemplate = ejs.compile(
-  fs.readFileSync(
-    path.resolve(process.cwd(), "template", templateName, "notice.ejs"),
-    "utf8"
-  )
-);
-const sendTemplate = ejs.compile(
-  fs.readFileSync(
-    path.resolve(process.cwd(), "template", templateName, "send.ejs"),
-    "utf8"
-  )
-);
+const templateName = process.env.TEMPLATE_NAME ? process.env.TEMPLATE_NAME : "rainbow";
+const noticeTemplate = ejs.compile(fs.readFileSync(path.resolve(process.cwd(), "template", templateName, "notice.ejs"), "utf8"));
+const sendTemplate = ejs.compile(fs.readFileSync(path.resolve(process.cwd(), "template", templateName, "send.ejs"), "utf8"));
 
 // 提醒站长
 exports.notice = (comment) => {
   // 站长自己发的评论不需要通知
-  if (
-    comment.get("mail") === process.env.TO_EMAIL ||
-    comment.get("mail") === process.env.BLOGGER_EMAIL ||
-    comment.get("mail") === process.env.SMTP_USER
-  ) {
+  if (comment.get("mail") === process.env.TO_EMAIL || comment.get("mail") === process.env.BLOGGER_EMAIL || comment.get("mail") === process.env.SMTP_USER) {
     return;
   }
 
@@ -54,13 +38,10 @@ exports.notice = (comment) => {
   const url = process.env.SITE_URL + comment.get("url");
   const comment_id = process.env.COMMENT ? process.env.COMMENT : "";
   const main_color = process.env.MAIN_COLOR ? process.env.MAIN_COLOR : "orange";
-  const main_img = process.env.MAIN_IMG
-    ? process.env.MAIN_IMG
-    : "https://ae01.alicdn.com/kf/U5bb04af32be544c4b41206d9a42fcacfd.jpg";
+  const main_img = process.env.MAIN_IMG ? process.env.MAIN_IMG : "https://ae01.alicdn.com/kf/U5bb04af32be544c4b41206d9a42fcacfd.jpg";
 
   if (!process.env.DISABLE_EMAIL) {
-    const emailSubject =
-      "📌 哇！「" + process.env.SITE_NAME + "」上有人回复了你啦！快点我！💦";
+    const emailSubject = "📌 「" + process.env.SITE_NAME + "」上有人回复了你啦！";
     const emailContent = noticeTemplate({
       siteName: process.env.SITE_NAME,
       siteUrl: process.env.SITE_URL,
@@ -73,10 +54,7 @@ exports.notice = (comment) => {
     });
     const mailOptions = {
       from: '"' + process.env.SENDER_NAME + '" <' + process.env.SMTP_USER + ">",
-      to:
-        process.env.TO_EMAIL ||
-        process.env.BLOGGER_EMAIL ||
-        process.env.SMTP_USER,
+      to: process.env.TO_EMAIL || process.env.BLOGGER_EMAIL || process.env.SMTP_USER,
       subject: emailSubject,
       html: emailContent,
     };
@@ -92,19 +70,7 @@ exports.notice = (comment) => {
   }
 
   // 微信提醒
-  const scContent =
-    "#### 评论内容" +
-    "\r\n > " +
-    comment.get("comment") +
-    "\r\n" +
-    "原文地址 👉 " +
-    process.env.SITE_URL +
-    comment.get("url") +
-    "\r\n #### 评论人\r\n" +
-    comment.get("nick") +
-    "(" +
-    comment.get("mail") +
-    ")";
+  const scContent = "#### 评论内容" + "\r\n > " + comment.get("comment") + "\r\n" + "原文地址 👉 " + process.env.SITE_URL + comment.get("url") + "\r\n #### 评论人\r\n" + comment.get("nick") + "(" + comment.get("mail") + ")";
   if (process.env.SCKEY != null) {
     axios({
       method: "post",
@@ -115,8 +81,7 @@ exports.notice = (comment) => {
       },
     })
       .then(function (response) {
-        if (response.status === 200 && response.data.errmsg === "success")
-          console.log("已微信提醒站长");
+        if (response.status === 200 && response.data.errmsg === "success") console.log("已微信提醒站长");
         else console.log("微信提醒失败:", response.data);
       })
       .catch(function (error) {
@@ -127,11 +92,7 @@ exports.notice = (comment) => {
   if (process.env.QMSG_KEY != null) {
     if (process.env.QQ_SHAKE != null) {
       axios
-        .get(
-          `https://qmsg.zendee.cn/send/${
-            process.env.QMSG_KEY
-          }?msg=${encodeURIComponent("[CQ:shake]")}`
-        )
+        .get(`https://qmsg.zendee.cn/send/${process.env.QMSG_KEY}?msg=${encodeURIComponent("[CQ:shake]")}`)
         .then(function (response) {
           if (response.status === 200 && response.data.success === true) {
             console.log("已发送QQ戳一戳");
@@ -147,28 +108,17 @@ exports.notice = (comment) => {
     if (process.env.QQ != null) {
       qq = "&qq=" + process.env.QQ;
     }
-    const scContent = `您的 ${
-      process.env.SITE_NAME
-    } 上有新评论了！
+    const scContent = `您的 ${process.env.SITE_NAME} 上有新评论了！
 ${name} 发表评论：
-${$(
-  text
-    .replace(/  <img.*?src="(.*?)".*?>/g, "\n[图片]$1\n")
-    .replace(/<br>/g, "\n")
-)
+${$(text.replace(/  <img.*?src="(.*?)".*?>/g, "\n[图片]$1\n").replace(/<br>/g, "\n"))
   .text()
   .replace(/\n+/g, "\n")
   .replace(/\n+$/g, "")}
-${url + "#" + comment.get("objectId")}`;
+${encodeURI(url) + "#" + comment.get("objectId")}`;
     axios
-      .get(
-        `https://qmsg.zendee.cn/send/${
-          process.env.QMSG_KEY
-        }?msg=${encodeURIComponent(scContent)}` + qq
-      )
+      .get(`https://qmsg.zendee.cn/send/${process.env.QMSG_KEY}?msg=${encodeURIComponent(scContent)}` + qq)
       .then(function (response) {
-        if (response.status === 200 && response.data.success === true)
-          console.log("已QQ提醒站长");
+        if (response.status === 200 && response.data.success === true) console.log("已QQ提醒站长");
         else console.warn("QQ提醒失败:", response.data);
       })
       .catch(function (error) {
@@ -180,19 +130,12 @@ ${url + "#" + comment.get("objectId")}`;
 // 发送邮件通知他人
 exports.send = (currentComment, parentComment) => {
   // 站长被 @ 不需要提醒
-  if (
-    parentComment.get("mail") === process.env.TO_EMAIL ||
-    parentComment.get("mail") === process.env.BLOGGER_EMAIL ||
-    parentComment.get("mail") === process.env.SMTP_USER
-  ) {
+  if (parentComment.get("mail") === process.env.TO_EMAIL || parentComment.get("mail") === process.env.BLOGGER_EMAIL || parentComment.get("mail") === process.env.SMTP_USER) {
     return;
   }
-  const emailSubject =
-    "📌 哇！「" + process.env.SITE_NAME + "」上有人回复了你啦！快点我！💦";
+  const emailSubject = "「" + process.env.SITE_NAME + "」上有人回复了你啦！";
   const main_color = process.env.MAIN_COLOR ? process.env.MAIN_COLOR : "orange";
-  const main_img = process.env.MAIN_IMG
-    ? process.env.MAIN_IMG
-    : "https://ae01.alicdn.com/kf/U5bb04af32be544c4b41206d9a42fcacfd.jpg";
+  const main_img = process.env.MAIN_IMG ? process.env.MAIN_IMG : "https://ae01.alicdn.com/kf/U5bb04af32be544c4b41206d9a42fcacfd.jpg";
   const emailContent = sendTemplate({
     siteName: process.env.SITE_NAME,
     siteUrl: process.env.SITE_URL,
@@ -202,11 +145,7 @@ exports.send = (currentComment, parentComment) => {
     text: currentComment.get("comment"),
     main_img: main_img,
     main_color: main_color,
-    url:
-      process.env.SITE_URL +
-      currentComment.get("url") +
-      "#" +
-      currentComment.get("pid"),
+    url: process.env.SITE_URL + currentComment.get("url") + "#" + currentComment.get("pid"),
   });
   const mailOptions = {
     from: '"' + process.env.SENDER_NAME + '" <' + process.env.SMTP_USER + ">",
@@ -221,12 +160,7 @@ exports.send = (currentComment, parentComment) => {
     }
     currentComment.set("isNotified", true);
     currentComment.save();
-    console.log(
-      currentComment.get("nick") +
-        " @了" +
-        parentComment.get("nick") +
-        ", 已通知."
-    );
+    console.log(currentComment.get("nick") + " @了" + parentComment.get("nick") + ", 已通知.");
   });
 };
 

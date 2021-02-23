@@ -110,10 +110,12 @@ exports.notice = (comment) => {
     }
     const scContent = `您的 ${process.env.SITE_NAME} 上有新评论了！
 ${name} 发表评论：
-${$(text.replace(/  <img.*?src="(.*?)".*?>/g, "\n[图片]$1\n").replace(/<br>/g, "\n"))
+
+${$(text.replace(/  <img.*?src="(.*?)".*?>/g, "\n[此处有图片]\n").replace(/<br>/g, "\n"))
   .text()
   .replace(/\n+/g, "\n")
   .replace(/\n+$/g, "")}
+
 ${encodeURI(url) + "#" + comment.get("objectId")}`;
     axios
       .get(`https://qmsg.zendee.cn/send/${process.env.QMSG_KEY}?msg=${encodeURIComponent(scContent)}` + qq)
